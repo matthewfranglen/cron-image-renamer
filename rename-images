@@ -19,6 +19,8 @@ OPTIONS:
     -d
     --destination
         The destination folder that receives the updated images.
+    --dry-run
+        Do not do anything. Print the changes that would be performed.
     -h
     --help
         This help.
@@ -32,9 +34,10 @@ function error () {
 function parse_args () {
     local -a source_folder
     local -a destination_folder
+    local -a dry_run
     local -a help
 
-    zparseopts s:=source_folder -source:=source_folder d:=destination_folder -destination:=destination_folder h=help -help=help
+    zparseopts s:=source_folder -source:=source_folder d:=destination_folder -destination:=destination_folder -dry-run=dry_run h=help -help=help
 
     if [ $#source_folder -gt 0 ]
     then
@@ -43,6 +46,10 @@ function parse_args () {
     if [ $#destination_folder -gt 0 ]
     then
         DESTINATION_FOLDER=${destination_folder[2]}
+    fi
+    if [ $#dry_run -gt 0 ]
+    then
+        DRY_RUN=1
     fi
     if [ $#help -gt 0 ]
     then
@@ -69,6 +76,11 @@ do
     then
         error "Failed to process ${file}"
     else
-        mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
+        if [ -z ${DRY_RUN} ]
+        then
+            mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
+        else
+            echo mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
+        fi
     fi
 done
