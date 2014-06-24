@@ -1,0 +1,74 @@
+#!/bin/zsh
+#
+# This will rename all images in the source directory, adding the width and
+# height to the start of the name. This will also move those images to the
+# target directory.
+
+COMMAND_NAME=${0:t}
+
+function help () {
+    cat <<EOF
+${COMMAND_NAME} --source FOLDER --destination FOLDER
+Renames and moves image files, prefixing them with their size.
+Intended to be run as a cron job.
+
+OPTIONS:
+    -s
+    --source
+        The source folder that contains the images to update.
+    -d
+    --destination
+        The destination folder that receives the updated images.
+    -h
+    --help
+        This help.
+EOF
+}
+
+function error () {
+    echo $@ >&2
+}
+
+function parse_args () {
+    local -a source_folder
+    local -a destination_folder
+    local -a help
+
+    zparseopts s:=source_folder -source:=source_folder d:=destination_folder -destination:=destination_folder h=help -help=help
+
+    if [ $#source_folder -gt 0 ]
+    then
+        SOURCE_FOLDER=${source_folder[2]}
+    fi
+    if [ $#destination_folder -gt 0 ]
+    then
+        DESTINATION_FOLDER=${destination_folder[2]}
+    fi
+    if [ $#help -gt 0 ]
+    then
+        help
+        exit
+    fi
+
+    if [[ -z ${SOURCE_FOLDER} || -z ${DESTINATION_FOLDER} ]]
+    then
+        error "Must provide source folder and destination folder"
+        help
+        exit 1
+    fi
+}
+
+setopt extended_glob
+
+parse_args $@
+
+for file in ${SOURCE_FOLDER}/*(N.:t)
+do
+    name=$(cd ${SOURCE_FOLDER} ; identify -format '%wx%h-%i' ${file})
+    if [ $? -ne 0 ]
+    then
+        error "Failed to process ${file}"
+    else
+        mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
+    fi
+done
