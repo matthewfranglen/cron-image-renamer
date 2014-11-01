@@ -31,6 +31,21 @@ function error () {
     echo $@ >&2
 }
 
+function enable_dry_run () {
+    # All this command really does is move images.
+    # A dry run can just replace the mv command with one that shows what would be done.
+    function mv () {
+        echo mv $@
+    }
+}
+
+function get_new_name () {
+    local file=$1
+
+    # Identify will print every frame of a GIF file, using head limits it to just the first.
+    identify -format '%wx%h-%f\n' ${file} | head -n1
+}
+
 function parse_args () {
     local -a source_folder
     local -a destination_folder
@@ -49,7 +64,7 @@ function parse_args () {
     fi
     if [ $#dry_run -gt 0 ]
     then
-        DRY_RUN=1
+        enable_dry_run
     fi
     if [ $#help -gt 0 ]
     then
@@ -69,18 +84,14 @@ setopt extended_glob
 
 parse_args $@
 
-for file in ${SOURCE_FOLDER}/*(N.:t)
+for file in ${SOURCE_FOLDER}/*(N.)
 do
-    name=$(cd ${SOURCE_FOLDER} ; identify -format '%wx%h-%i' ${file})
-    if [ $? -ne 0 ]
+    name=$(get_new_name ${file})
+
+    if [ $? -ne 0 ] || [ -z ${name} ]
     then
         error "Failed to process ${file}"
     else
-        if [ -z ${DRY_RUN} ]
-        then
-            mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
-        else
-            echo mv -n ${SOURCE_FOLDER}/${file} ${DESTINATION_FOLDER}/${name}
-        fi
+        mv -n ${file} ${DESTINATION_FOLDER}/${name}
     fi
 done
