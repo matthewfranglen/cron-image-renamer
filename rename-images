@@ -39,6 +39,13 @@ function enable_dry_run () {
     }
 }
 
+function get_new_name () {
+    local file=$1
+
+    # Identify will print every frame of a GIF file, using head limits it to just the first.
+    identify -format '%wx%h-%f\n' ${file} | head -n1
+}
+
 function parse_args () {
     local -a source_folder
     local -a destination_folder
@@ -77,10 +84,11 @@ setopt extended_glob
 
 parse_args $@
 
-for file in ${SOURCE_FOLDER}/*(N.:t)
+for file in ${SOURCE_FOLDER}/*(N.)
 do
-    name=$(cd ${SOURCE_FOLDER} ; identify -format '%wx%h-%i' ${file})
-    if [ $? -ne 0 ]
+    name=$(get_new_name ${file})
+
+    if [ $? -ne 0 ] || [ -z ${name} ]
     then
         error "Failed to process ${file}"
     else
